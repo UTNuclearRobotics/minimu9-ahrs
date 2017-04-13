@@ -5,15 +5,11 @@ CC := g++
 
 CPPFLAGS += -I.
 
-# Use the Eigen library.
-EIGEN_NAME = eigen3
-CPPFLAGS += $(shell pkg-config --cflags $(EIGEN_NAME))
-
 # All warnings
 CPPFLAGS += -Wall
 
 # Use a modern language
-CPPFLAGS += --std=gnu++11
+CPPFLAGS += --std=c++0x
 
 # Use boost libraries
 LDFLAGS += -lboost_program_options
@@ -22,7 +18,7 @@ LDFLAGS += -lboost_program_options
 #CPPFLAGS += -g -rdynamic
 
 # Optimize the code.
-CPPFLAGS += -O2
+CPPFLAGS += -O3
 
 # Fix http://gcc.gnu.org/bugzilla/show_bug.cgi?id=42748
 CPPFLAGS += -Wno-psabi

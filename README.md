@@ -1,5 +1,7 @@
 # minimu9-ahrs
 
+Modification so that IMU information is directly published in ROS.
+
 *Note: The versions of the MinIMU-9 that are supported by this program are all sold out.  I plan to add support for the MinIMU-9 v5 soon.  Until then, you can still get an [AltIMU-10 v4], which has the same chips as the [MinIMU-9 v3], so it will work with this program.*
 
 **minimu9-ahrs** is a program for reading sensor data from [Pololu MinIMU-9] over I²C.  It supports MinIMU-9 versions v0, v1, v2, and v3.  The program can output the raw sensor data from the magnetometor, accelerometer, and gyro or it can use that raw data to compute the orientation of the IMU.  This program was designed and tested on the [Raspberry Pi], but it will probably work on any embedded Linux board that supports I²C.  A Debian package is available for easy installation and the [minimu9-ahrs source code] is on GitHub.

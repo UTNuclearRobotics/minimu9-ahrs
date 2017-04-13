@@ -5,11 +5,16 @@
 #include <iomanip>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
 #include <system_error>
 #include <boost/program_options.hpp>
+
+#include "ros/ros.h"
+#include "sensor_msgs/Imu.h"
+#include "sensor_msgs/MagneticField.h"
+
+#define LOOP_RATE 10
 
 namespace opts = boost::program_options;
 
@@ -60,9 +65,10 @@ void output_euler(quaternion & rotation)
 
 int millis()
 {
-    struct timeval tv;
+/*    struct timeval tv;
     gettimeofday(&tv, NULL);
-    return (tv.tv_sec) * 1000 + (tv.tv_usec)/1000;
+    return (tv.tv_sec) * 1000 + (tv.tv_usec)/1000;*/
+    return ros::Time::now().toSec();
 }
 
 void streamRawValues(IMU& imu)
@@ -166,7 +172,12 @@ void ahrs(IMU & imu, fuse_function * fuse, rotation_output_function * output)
     quaternion rotation = quaternion::Identity();
 
     int start = millis(); // truncate 64-bit return value
-    while(1)
+    ros::NodeHandle nh;
+    ros::Publisher imu_publisher = nh.advertise<sensor_msgs::Imu>("imu", 1); 
+    ros::Publisher imu_raw_publisher = nh.advertise<sensor_msgs::Imu>("imu/raw", 1); 
+    ros::Publisher magnetic_field_publisher = nh.advertise<sensor_msgs::MagneticField>("magnetic_field", 1); 
+    ros::Rate rate(LOOP_RATE);
+    while(ros::ok())
     {
         int last_start = start;
         start = millis();
@@ -177,16 +188,60 @@ void ahrs(IMU & imu, fuse_function * fuse, rotation_output_function * output)
         vector acceleration = imu.readAcc();
         vector magnetic_field = imu.readMag();
 
+        ros::Time generated_message_time = ros::Time::now();
+
+        sensor_msgs::MagneticField magnetic_field_raw;
+        magnetic_field_raw.header.stamp = generated_message_time;
+        magnetic_field_raw.header.frame_id = "imu_link"
+        magnetic_field_raw.magnetic_field.x = magnetic_field[0];
+        magnetic_field_raw.magnetic_field.y = magnetic_field[1];
+        magnetic_field_raw.magnetic_field.z = magnetic_field[2];
+
+        sensor_msgs::IMU imu_msg_raw;
+        imu_msg_raw.header.stamp = generated_message_time;
+        imu_msg_raw.header.frame_id = "imu_link"
+        imu_msg_raw.linear_acceleration.x = acceleration[0];
+        imu_msg_raw.linear_acceleration.y = acceleration[1];
+        imu_msg_raw.linear_acceleration.z = acceleration[2];
+
+        imu_msg_raw.angular_velocity.x = angular_velocity[0];
+        imu_msg_raw.angular_velocity.y = angular_velocity[1];
+        imu_msg_raw.angular_velocity.z = angular_velocity[2];
+
         fuse(rotation, dt, angular_velocity, acceleration, magnetic_field);
 
-        output(rotation);
-        std::cout << "  " << acceleration << "  " << magnetic_field << std::endl << std::flush;
+
+        sensor_msgs::IMU imu_msg;
+        imu_msg.header.stamp = generated_message_time;
+        imu_msg.header.frame_id = "imu_link"
+        imu_msg.orientation.x = rotation.x()
+        imu_msg.orientation.y = rotation.y()
+        imu_msg.orientation.z = rotation.z()
+        imu_msg.orientation.w = rotation.w()
+        
+        imu_msg.angular_velocity.x = angular_velocity[0];
+        imu_msg.angular_velocity.y = angular_velocity[1];
+        imu_msg.angular_velocity.z = angular_velocity[2];
+        
+        imu_msg.linear_acceleration.x = acceleration[0];
+        imu_msg.linear_acceleration.y = acceleration[1];
+        imu_msg.linear_acceleration.z = acceleration[2];
+
+        imu_raw_publisher.publish(imu_msg_raw);        
+        magnetic_field_publisher.publish(magnetic_field_raw);
+        imu_publisher.publish(imu_msg);
+
+        //output(rotation);
+        //std::cout << "  " << acceleration << "  " << magnetic_field << std::endl << std::flush;
 
         // Ensure that each iteration of the loop takes at least 20 ms.
-        while(millis() - start < 20)
+        /*while(millis() - start < 20)
         {
             usleep(1000);
-        }
+        }*/
+        
+        ros::spinOnce(); // Need to call this function often to allow ROS to process incoming messages
+        rate.sleep(); // Sleep for the rest of the cycle, to enforce the FSM loop rate
     }
 }
 
@@ -255,6 +310,8 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        ros::init(argc, argv, "minimu9_ahrs");
+
         // Figure out the basic operating mode and start running.
         if (mode == "raw")
         {
@@ -283,7 +340,7 @@ int main(int argc, char *argv[])
     {
         std::string what = error.what();
         const std::error_code & code = error.code();
-        std::cerr << "Error: " << what << " (" << code << ")" << std::endl;
+        std::cerr << "Error: " << what << "  " << code.message() << " (" << code << ")" << std::endl;
         return 2;
     }
     catch(const opts::multiple_occurrences & error)
@@ -291,7 +348,7 @@ int main(int argc, char *argv[])
         std::cerr << "Error: " << error.what() << " of " << error.get_option_name() << " option." << std::endl;
         return 1;
     }
-    catch(const std::exception & error)
+    catch(const std::exception & error)    
     {
         std::cerr << "Error: " << error.what() << std::endl;
         return 9;
