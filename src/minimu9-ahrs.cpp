@@ -1,3 +1,4 @@
+// Comment if using older version of Pololu IMUv9.
 #include "vector.h"
 #include "MinIMU9.h"
 #include "version.h"

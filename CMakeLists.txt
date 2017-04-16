@@ -91,6 +91,13 @@ catkin_package(
 )
 
 SET ( CMAKE_CXX_FLAGS "-Wall -Wno-deprecated -g -std=c++0x" )
+option(USE_IMU_V5 "ON if Pololu IMUv5" ON)
+
+if (USE_IMU_V5)
+  add_definitions(-DIMU_V5=1)
+  message(STATUS "IMU_V5")
+endif()
+
 ###########
 ## Build ##
 ###########
@@ -104,7 +111,7 @@ include_directories(
   ${Eigen_INCLUDE_DIRS}
 )
 
-add_executable(minimu9-ahrs src/minimu9-ahrs.cpp src/I2CBus.cpp src/L3G.cpp src/LSM303.cpp src/MinIMU9.cpp)
+add_executable(minimu9-ahrs src/minimu9-ahrs.cpp src/I2CBus.cpp src/L3G.cpp src/LSM303.cpp src/MinIMU9.cpp src/LIS3MDL.cpp src/LSM6.cpp)
 
 target_link_libraries(minimu9-ahrs ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
