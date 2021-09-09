@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+# better to use the non-ros version of this package to do the calibration
 
 from __future__ import print_function
 import sys
